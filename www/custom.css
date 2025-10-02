@@ -1,0 +1,39 @@
+.card-info:not(.card-outline)>.card-header, .card-info:not(.card-outline)>.card-header a {
+    background: black;
+}
+
+
+.nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+    color: #fff;
+    background-color: black;
+}
+
+
+.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active {
+    background-color: black;
+    color: #fff;
+}
+
+.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active :hover {
+    background-color: black;
+}
+
+
+.card-primary:not(.card-outline)>.card-header {
+    background-color: black;
+}
+
+.card-secondary:not(.card-outline)>.card-header {
+    background-color: black;
+}
+
+
+
+
+/*FOOTER */ 
+.main-footer {
+    background-color: #fff;
+    border-top: 1px solid #dee2e6;
+    color: #869099;
+    padding: 1rem;
+}
