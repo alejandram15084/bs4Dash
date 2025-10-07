@@ -1,31 +1,141 @@
+/*BODY*/
+
+
+/*TABS*/
+
+.content-wrapper .nav-pills {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+
+}
+
+.content-wrapper .nav-pills .nav-item {
+  flex: 1;
+  text-align: center;
+  background-color: white !important; 
+  color: black !important;            
+  border: 1px solid #ccc;  
+  border-radius: 0.25rem;  
+  margin: 0 2px;           
+  transition: all 0.3s;    
+}
+
+.nav-pills .nav-link.active, 
+.nav-pills .show>.nav-link {
+    color: #fff;
+    background-color: #333333;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: #333333 !important; 
+    font-weight: bold;
+    color:white !important;
+   
+}
+
+
+/*CAJA DEFINICION */
 .card-info:not(.card-outline)>.card-header, .card-info:not(.card-outline)>.card-header a {
-    background: black;
+    background: #FFFFFF;
+    color: black;
 }
 
-
-.nav-pills .nav-link.active, .nav-pills .show>.nav-link {
-    color: #fff;
-    background-color: black;
-}
-
-
-.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active {
-    background-color: black;
-    color: #fff;
-}
-
-.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active :hover {
-    background-color: black;
-}
-
+/* CAJAS DEFINICIONES */ 
 
 .card-primary:not(.card-outline)>.card-header {
-    background-color: black;
+    background: #FFFFFF;
+    color: black;
 }
 
 .card-secondary:not(.card-outline)>.card-header {
-    background-color: black;
+    background-color: #ffffff;
+    color: black;
 }
+
+
+/*SIDEBAR */
+.sidebar-light-primary .nav-sidebar {
+    justify-content: left;
+}
+
+.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active {
+    background-color: #333333;
+    color: #fff;
+}
+
+
+.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active :hover {
+    background-color: #333333;
+}
+
+
+
+
+
+
+/* --- KPIS --- */ 
+
+.bg-gradient-secondary {
+    color: #333333;
+    background: white  !important;
+}
+
+.info-box .info-box-content {
+  white-space: normal !important;   /* Evita que el texto se corte */
+  padding: 12px !important;
+}
+
+.info-box .info-box-icon {
+  font-size: 35px !important;        /* Icono más grande y centrado */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-box .info-box-number {
+  font-size: 26px !important;        /* Valor más destacado */
+  font-weight: bold;
+}
+
+
+.info-box {
+  border-radius: 12px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+}
+
+.info-box .info-box-text {
+  text-transform: none !important;  
+  font-size: 14px !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.2em !important;
+}
+
+/* Animación hover para los KPI (bs4InfoBox) */
+.info-box {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer; /* Opcional: hace que parezca clickeable */
+}
+
+.info-box:hover {
+  transform: scale(1.05);  /* Aumenta un 5% el tamaño para dar efecto de acercamiento */
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2); /* Sombra más fuerte para sensación de elevación */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -37,3 +147,5 @@
     color: #869099;
     padding: 1rem;
 }
+
+

@@ -16,39 +16,198 @@ server <- function(input, output, session) {
 
 
 
-
-  # 3️⃣ FILA DE KPI BOXES
+ # -- KPIS ---
   output$kpi_boxes <- renderUI({
-    req(input$tab_activa)
-    # Aquí defines los valores según la pestaña activa
     if (input$tab_activa == "Infraestructura") {
-      kpi1 <- "45%"
-      kpi2 <- "3.2%"
-      kpi3 <- "12.350"
-      kpi4 <- "1.5%"
+      fluidRow(
+        bs4InfoBox(title = "Total de IPS con servicios de salud mental", 
+                   value = "48",
+                   icon = icon("hospital"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Total de camas especializadas en salud",
+                   value = "50",
+                   icon = icon("bed"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor disponibilidad de servicios",
+                   value = "Rionegro",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "% de municipios con mas de dos servicios",
+                   value = "1.5%",
+                   icon = icon("network-wired"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3)
+      )
     } else if (input$tab_activa == "Años perdidos") {
-      kpi1 <- "120"
-      kpi2 <- "2.8%"
-      kpi3 <- "9.500"
-      kpi4 <- "0.5%"
-    } else {
-      kpi1 <- "-"
-      kpi2 <- "-"
-      kpi3 <- "-"
-      kpi4 <- "-"
+      fluidRow(
+        bs4InfoBox(title = "Total AVPP",
+                   value = "",
+                   icon = icon("chart-line"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Trastorno con mayor AVPP",
+                   value = "",
+                   icon = icon("exclamation-triangle"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor AVPP",
+                   value = "",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con menor AVPP",
+                   value = "",
+                   icon = icon("map-marker"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+      )
+    } else if (input$tab_activa == "Atención") {
+      fluidRow(
+        bs4InfoBox(title = "% total de población atendida",
+                   value = "",
+                   icon = icon("users"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Trastorno con mayor atención",
+                   value = "",
+                   icon = icon("stethoscope"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor cobertura",
+                   value = "",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con menor cobertura",
+                   value = "",
+                   icon = icon("map-marker"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+      )
+    } else if (input$tab_activa == "Hospitalización") {
+      fluidRow(
+        bs4InfoBox(title = "% total de hospitalizaciones",
+                   value = "",
+                   icon = icon("hospital-user"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Trastorno con mayor hospitalización",
+                   value = "",
+                   icon = icon("procedures"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor % hospitalización",
+                   value = "",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con menor % hospitalización",
+                   value = "",
+                   icon = icon("map-marker"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+      )
+    } else if (input$tab_activa == "Mortalidad") {
+      fluidRow(
+        bs4InfoBox(title = "Mortalidad por epilepsia",
+                   value = "",
+                   icon = icon("brain"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Mortalidad por suicidio",
+                   value = "",
+                   icon = icon("skull-crossbones"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Mortalidad por trastornos mentales",
+                   value = "",
+                   icon = icon("hosphead-side-brainital"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor mortalidad",
+                   value = "",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+      )
+    } else if (input$tab_activa == "Letalidad") {
+      fluidRow(
+        bs4InfoBox(title = "Letalidad por intoxicaciones",
+                   value = "",
+                   icon = icon("biohazard"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Letalidad por lesiones autoinfligidas",
+                   value = "",
+                   icon = icon("skull"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con mayor letalidad",
+                   value = "",
+                   icon = icon("map-marker-alt"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+        bs4InfoBox(title = "Municipio con menor letalidad",
+                   value = "",
+                   icon = icon("map-marker"),
+                   color = "secondary",
+                   gradient = TRUE,
+                   fill = TRUE,
+                   width = 3),
+      )
     }
-    # Crear las cajas dinámicamente
-    tagList(
-      bs4ValueBox(value = kpi1, subtitle = "Indicador 1", 
-                  icon = icon("heartbeat"), width = 3),
-      bs4ValueBox(value = kpi2, subtitle = "Indicador 2",
-                  icon = icon("skull"), width = 3),
-      bs4ValueBox(value = kpi3, subtitle = "Indicador 3",
-                  icon = icon("hospital"), width = 3),
-      bs4ValueBox(value = kpi4, subtitle = "Indicador 4",
-                  icon = icon("brain"), width = 3)
-    )
   })
+
+
 
 
 
@@ -65,7 +224,20 @@ server <- function(input, output, session) {
                 selected = max(datos_total$Ano))
   })
 
+  # --- Filtro tipo ----
+output$tipo_ui <- renderUI({
+  req(input$tab_activa)  # Asegura que la pestaña esté definida
 
+  if(input$tab_activa == "Infraestructura") {
+    selectInput("tipo", "Tipo",
+                choices = "Geografia",
+                selected = "Geografia")
+  } else {
+    selectInput("tipo", "Tipo",
+                choices = c("Geografia", "Sexo", "Edad"),
+                selected = "Geografia")
+  }
+})
 
 
   # --- Filtro categorías Sexo y Edad---
@@ -124,18 +296,16 @@ output$indicador_ui <- renderUI({
   data_filtrada <- reactive({
     req(input$indicador, input$muni, input$year_min, input$year_max)
 
-    df <- datos_total %>%
-      filter(
-        Indicador1 == input$indicador,
-        Municipio  %in% input$muni,
-        Ano        >= input$year_min,
-        Ano        <= input$year_max
-      )
+    df <- datos_total[
+    Indicador1 == input$indicador &
+    Municipio  %in% input$muni &
+    Ano        >= input$year_min &
+    Ano        <= input$year_max]
 
     # Si se selecciona categoría (Sexo o Edad), aplicar filtro adicional
     if (!is.null(input$categoria) && input$categoria != "Total") {
-      df <- df %>% filter(Categoria == input$categoria)
-    }
+    df <- df[Categoria == input$categoria]
+  }
 
     df
   })
@@ -145,7 +315,9 @@ output$indicador_ui <- renderUI({
   # -------------------------------------------------------------------
   output$linePlot <- renderPlotly({
     df <- data_filtrada()
-    req(nrow(df) > 0)  # Asegura que haya datos
+    validate(
+      need(nrow(df) > 0, "No hay datos disponibles para los filtros seleccionados")
+    )  # Asegura que haya datos
 
     plot_ly(
       data = df,
@@ -162,7 +334,7 @@ output$indicador_ui <- renderUI({
       )
     ) %>%
       layout(
-        title  = paste("Indicador:", input$indicador),
+        #title  = paste("Indicador:", input$indicador),
         xaxis  = list(title = "Año"),
         yaxis  = list(title = "Valor"),
         hovermode = "x unified"
@@ -173,8 +345,8 @@ output$indicador_ui <- renderUI({
   # 7️⃣ BOTÓN PARA LIMPIAR FILTROS
   # -------------------------------------------------------------------
   observeEvent(input$reset_filters, {
-    updateSelectInput(session, "year_min", selected = min(years))
-    updateSelectInput(session, "year_max", selected = max(years))
+    updateSelectInput(session, "year_min", selected = min(anios))
+    updateSelectInput(session, "year_max", selected = max(anios))
     updateSelectInput(session, "tipo", selected = "Geografia")
 
     # Actualizar municipios según indicador actual
@@ -189,7 +361,6 @@ output$indicador_ui <- renderUI({
                       choices = municipios_disp,
                       selected = municipios_disp)
   })
-
 
 
 

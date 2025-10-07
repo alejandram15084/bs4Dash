@@ -8,8 +8,8 @@ ui <- bs4DashPage(
     title = dashboardBrand(
       title = "Dashboard",
       color = "gray-dark",
-      href = "https://adminlte.io/themes/v3",
-      image = "https://adminlte.io/themes/v3/dist/img/AdminLTELogo.png"
+      href = "https://www.udea.edu.co/wps/portal/udea/web/inicio",
+      image = "logo.png"
     )
   ),
 
@@ -17,7 +17,7 @@ ui <- bs4DashPage(
   sidebar = bs4DashSidebar(
     bs4SidebarMenu(
       bs4SidebarMenuItem(
-        "Indicadores de salud mental",
+        "Indicadores salud mental",
         tabName = "indicadores",
         icon = icon("chart-line")
       ),
@@ -47,7 +47,7 @@ ui <- bs4DashPage(
     ),
 
     bs4TabItems(
-      # --- TAB PRINCIPAL ---
+      # --- TAB 1: INDICADORES ---
       bs4TabItem(
         tabName = "indicadores",
 
@@ -70,47 +70,9 @@ ui <- bs4DashPage(
         ),
 
         br(),
-
         # 2️⃣ CAJA DE DEFINICIONES
         fluidRow(
-          bs4Card(
-            title = "Definición",
-            status = "info",
-            solidHeader = TRUE,
-            width = 12,
-            collapsible = FALSE,
-            uiOutput("definicion_ui")
-          )
-        ),
-
-        br(),
-
-        # 3️⃣ FILA DE KPI BOXES
-        fluidRow(
-          bs4ValueBox(
-            value = "45%",
-            subtitle = "Total de camas especialidas en salud mental",
-            icon = icon("heartbeat"),
-            width = 3
-          ),
-          bs4ValueBox(
-            value = "3.2%",
-            subtitle = "Total de IPS con servicios de salud mental",
-            icon = icon("skull"),
-            width = 3
-          ),
-          bs4ValueBox(
-            value = "12.350",
-            subtitle = "Municipio con mayor disponibilidad de servicios",
-            icon = icon("hospital"),
-            width = 3
-          ),
-          bs4ValueBox(
-            value = "1.5%",
-            subtitle = "Demencia",
-            icon = icon("brain"),
-            width = 3
-          )
+          uiOutput("kpi_boxes")
         ),
 
         br(),
@@ -126,18 +88,26 @@ ui <- bs4DashPage(
 
             fluidRow(
               column(2, selectInput("year_min", "Año desde",
-                                    choices = years, selected = min(years))),
+                                    choices = anios, selected = min(anios))),
               column(2, selectInput("year_max", "Año hasta",
-                                    choices = years, selected = max(years))),
+                                    choices = anios, selected = max(anios))),
 
-              column(2, selectInput("tipo", "Tipo",
-                                    choices = c("Geografia", "Sexo", "Edad"),
-                                    selected = "Geografia")),
+              column(2, uiOutput("tipo_ui")),
 
               column(3, uiOutput("categoria_ui")),
-              column(3, selectInput("muni", "Municipios",
-                                    choices = c(unique(datos_total$Municipio)),
-                                    multiple = TRUE))
+              column(3, pickerInput(
+                inputId = "muni",
+                label = "Municipios",
+                choices = municipios,
+                multiple = TRUE,
+                selected = c("LaUnion", "ElCarmen", "Rionegro", "LaCeja", "ElRetiro"),
+                options = list(
+                  `actions-box` = TRUE,          # seleccionar deseleccionar todo
+                  `live-search` = TRUE,          # buscar municipios
+                  `selected-text-format` = "count > 3"  # muestra "3 seleccionados" si hay muchos
+                  )
+                )
+              ),
             ),
             fluidRow(
               column(12, div(style = "text-align: right;",
@@ -151,7 +121,7 @@ ui <- bs4DashPage(
             width = 12,
             status = "primary",
             solidHeader = TRUE,
-            title = "Serie temporal",
+            #title = "Serie temporal",
             collapsible = FALSE,
 
             fluidRow(
@@ -163,67 +133,105 @@ ui <- bs4DashPage(
             br(),
             plotlyOutput("linePlot", height = "400px")
           )
-        ),
-
-      )
-    ),
-    # ✅ Caja con tres columnas
-    fluidRow(
-      column(
-        width = 4,
-        bs4Card(
-          title = "Fuente de datos",
-          width = 12,
-          collapsible = FALSE,
-          status = "secondary",
-          solidHeader = TRUE,
-          style = "height: 100px;",
-          "Sistema Integrado de Información de la Protección Social SISPRO. 
-          Datos agregados desde 2005 hasta 2024."
         )
       ),
-      column(
-        width = 4,
-        bs4Card(
-          title = "Cobertura",
-          width = 12,
-          collapsible = FALSE,
-          status = "secondary",
-          solidHeader = TRUE,
-          style = "height: 100px;",
-          "23 municipios del Oriente Antioqueño
-          ", br()
+      # --- TAB 2: SUICIDIO ---
+      bs4TabItem(
+        tabName = "suicidio",
+        fluidRow(
+          h3("Tasa de intento de suicidio")
         )
       ),
-      column(
-        width = 4,
-        bs4Card(
-          title = "Última actualización",
-          width = 12,
-          collapsible = FALSE,
-          status = "secondary",
-          solidHeader = TRUE,
-          style = "height: 100px;",
-          "Los datos mostrados corresponden a la información más reciente 
-          disponible hasta diciembre de 2024."
+      # --- TAB 3: DEMENCIA ---
+      bs4TabItem(
+        tabName = "demencia",
+        fluidRow(
+          h3("Indicador de demencia")
+        )
+      ),
+      # --- TAB 4: SERVICIOS ---
+      bs4TabItem(
+        tabName = "servicios",
+        fluidRow(
+          h3("Uso de servicios de salud mental"),
+          p("HALLO LEUTE, WIE GEHTS DIR")
         )
       )
     ),
     br()
   ), #FINAL BODY
 
+
+
+
+
+
   footer = bs4DashFooter(
-    left = HTML('
-    <div style="width: 100%; text-align: center;">
-      Tablero interactivo desarrollado como trabajo de grado por 
-      <strong>Valentina Jaramillo Marín</strong>, 
-      <strong>Jenifer Alejandra Martínez Mendoza</strong> y 
-      <strong>Víctor Manuel Restrepo López</strong>, 
-      bajo la asesoría de Juan Pablo Sánchez Escudero.
-      <br>2026
-    </div>
-  ')
+    left = tagList(
+      div(
+        style = "padding: 0px; border: none; color: black",
+        # ✅ Caja con tres columnas ---
+        fluidRow(
+          column(
+            width = 4,
+            bs4Card(
+              title = "Fuente de datos",
+              width = 12,
+              collapsible = FALSE,
+
+              solidHeader = TRUE,
+              style = "height: 100px;",
+              "Sistema Integrado de Información de la Protección Social SISPRO. 
+              Datos agregados desde 2005 hasta 2024."
+            )
+          ),
+          column(
+            width = 4,
+            bs4Card(
+              title = "Cobertura",
+              width = 12,
+              collapsible = FALSE,
+
+              solidHeader = TRUE,
+              style = "height: 100px;",
+              "23 municipios del Oriente Antioqueño"
+            )
+          ),
+          column(
+            width = 4,
+            bs4Card(
+              title = "Última actualización",
+              width = 12,
+              collapsible = FALSE,
+
+              solidHeader = TRUE,
+              style = "height: 100px;",
+              "Los datos mostrados corresponden a la información más reciente 
+              disponible hasta diciembre de 2024."
+            )
+          )
+        )
+      ),
+      br(),
+      # --- Texto de créditos ---
+      div(
+        style = "width: 100%; text-align: center;",
+        HTML("
+          Tablero interactivo desarrollado como trabajo de grado por 
+          <strong>Valentina Jaramillo Marín</strong>, 
+          <strong>Jenifer Alejandra Martínez Mendoza</strong> y 
+          <strong>Víctor Manuel Restrepo López</strong>, 
+          bajo la asesoría de Juan Pablo Sánchez Escudero.
+          <br>2026
+        ")
+      )
+    )
   ),
+
+
+
+
+
 
   # --- CONTROLBAR ---
   controlbar = bs4DashControlbar(),
