@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+# R
+.RData
+.Rhistory
+
+# RStudio
+.Rproj.user/
+
+# Archivos temporales
+*.tmp
+*.log
