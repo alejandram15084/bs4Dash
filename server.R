@@ -394,6 +394,7 @@ server <- function(input, output, session) {
   })
   output$municipio_edad_ui <- renderUI({
     req(input$indicador_edad, input$anio_edad)
+
     municipios_validos <- datos_total[
       Indicador1 == input$indicador_edad &
       Ano == input$anio_edad &
@@ -402,11 +403,25 @@ server <- function(input, output, session) {
       as.numeric(Valor1) > 0,
       sort(unique(Municipio))
     ]
+
+    selected_municipio <- isolate(input$municipio_edad)
+  
+    if (!is.null(selected_municipio) && selected_municipio %in% municipios_validos) {
+      selected_final <- selected_municipio
+    } else if ("Rionegro" %in% municipios_validos) {
+      selected_final <- "Rionegro"
+    } else {
+      selected_final <- municipios_validos[1]
+    }
+
+
+
+
     selectInput(
       inputId = "municipio_edad",
       label = "Municipio",
       choices = municipios_validos,
-      selected = ifelse("Rionegro" %in% municipios_validos, "Rionegro", municipios_validos[1])
+      selected = selected_final
     )
   })
   output$barPlotEdad <- renderPlotly({

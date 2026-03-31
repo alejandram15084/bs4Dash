@@ -140,7 +140,7 @@ ui <- bs4DashPage(
               column(3,
                 div(style = "text-align: right; padding-top: 25px;",
                   #actionButton("run_query", "Actualizar", class = "btn btn-primary"),
-                  actionButton("reset_filters", "Limpiar filtros",
+                  actionButton("reset_filters", "Resetear filtros",
                                class = "btn btn-secondary")
                 )
               )
