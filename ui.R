@@ -246,6 +246,7 @@ ui <- bs4DashPage(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
+              title = "Principales causas de atención",
               uiOutput("anio_atencion_ui"),
               plotlyOutput("grafico_top_atencion", height = "400px")
               %>% withSpinner(color = "black")
