@@ -315,7 +315,7 @@ ui <- bs4DashPage(
               column(3,
                 div(
                   style = "text-align: right; padding-top: 25px;",
-                  actionButton("reset_filters_suicidio", "Limpiar filtros",
+                  actionButton("reset_filters_suicidio", "Resetear filtros",
                                class = "btn btn-secondary")
                 )
               )
@@ -375,7 +375,7 @@ ui <- bs4DashPage(
               column(3,
                 div(
                   style = "text-align: right; padding-top: 25px;",
-                  actionButton("reset_filters_demencia", "Limpiar filtros",
+                  actionButton("reset_filters_demencia", "Resetear filtros",
                                class = "btn btn-secondary")
                 )
               )
@@ -440,7 +440,7 @@ ui <- bs4DashPage(
                   style = "text-align: right; padding-top: 25px;",
                   actionButton(
                     "reset_filters_servicios",
-                    "Limpiar filtros",
+                    "Resetear filtros",
                     class = "btn btn-secondary"
                   )
                 )
