@@ -297,7 +297,9 @@ server <- function(input, output, session) {
 #  GRÁFICO DE BARRAS POR SEXO 
 # -------------------------------------------------------------------
 
+
 # Indicador
+
 output$indicador_sexo_ui <- renderUI({
   req(input$tab_activa)
   
@@ -318,14 +320,17 @@ output$indicador_sexo_ui <- renderUI({
     inputId = "indicador_sexo",
     label = "Indicador",
     choices = indicadores_validos_sexo,
-    selected = indicadores_validos_sexo
+    selected = indicadores_validos_sexo[1]
   )
 })
 
-# Municipio (dropdown pro 🔥)
+
+
+# Municipio 
+
 output$municipio_sexo_ui <- renderUI({
-  req(input$indicador_sexo, input$anio_sexo)
-  
+  req(input$tab_activa, input$indicador_sexo, input$anio_sexo)
+
   municipios_validos <- datos_total[
     Indicador1 == input$indicador_sexo &
     Ano == input$anio_sexo &
@@ -334,25 +339,13 @@ output$municipio_sexo_ui <- renderUI({
     as.numeric(Valor1) > 0,
     sort(unique(Municipio))
   ]
-  
-  # mantener selección previa
-  selected_prev <- isolate(input$municipio_sexo)
-  
-  if (!is.null(selected_prev)) {
-    selected_final <- intersect(selected_prev, municipios_validos)
-  } else {
-    selected_final <- municipios_validos
-  }
-  
-  if (length(selected_final) == 0) {
-    selected_final <- municipios_validos
-  }
-  
+
+
   pickerInput(
     inputId = "municipio_sexo",
     label = "Municipio",
     choices = municipios_validos,
-    selected = selected_final,
+    selected = municipios_validos,
     multiple = TRUE,
     options = list(
       `actions-box` = TRUE,
@@ -365,7 +358,9 @@ output$municipio_sexo_ui <- renderUI({
   )
 })
 
+
 # Gráfica
+
 output$barPlotSexo <- renderPlotly({
   req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo)
   
@@ -389,29 +384,21 @@ output$barPlotSexo <- renderPlotly({
     by = .(Municipio, Categoria)
   ]
   
-  # 🔥 completar combinaciones Municipio × Sexo
-  municipios <- unique(df_agg$Municipio)
-  sexos <- c("Masculino", "Femenino")
-  
-  combinaciones <- CJ(
-    Municipio = municipios,
-    Categoria = sexos
-  )
+  # asegurar que siempre aparezcan ambos sexos
+  sexos_completos <- data.table(Categoria = c("Masculino", "Femenino"))
   
   df_agg <- merge(
-    combinaciones,
     df_agg,
-    by = c("Municipio", "Categoria"),
-    all.x = TRUE
+    sexos_completos,
+    by = "Categoria",
+    all = TRUE
   )
   
   df_agg[is.na(Valor), Valor := 0]
   
-  df_agg[, Categoria := factor(Categoria, 
-                               levels = c("Masculino", "Femenino"))]
-  
+  # colores
   colores_sexo <- c(
-    "Masculino" = "#344e41", 
+    "Masculino" = "#344e41",
     "Femenino" = "#a3b18a"
   )
   
