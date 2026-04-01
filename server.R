@@ -297,9 +297,7 @@ server <- function(input, output, session) {
 #  GRÁFICO DE BARRAS POR SEXO 
 # -------------------------------------------------------------------
 
-
 # Indicador
-
 output$indicador_sexo_ui <- renderUI({
   req(input$tab_activa)
   
@@ -320,17 +318,14 @@ output$indicador_sexo_ui <- renderUI({
     inputId = "indicador_sexo",
     label = "Indicador",
     choices = indicadores_validos_sexo,
-    selected = indicadores_validos_sexo[1]
+    selected = indicadores_validos_sexo
   )
 })
 
-
-
 # Municipio 
-
 output$municipio_sexo_ui <- renderUI({
-  req(input$tab_activa, input$indicador_sexo, input$anio_sexo)
-
+  req(input$indicador_sexo, input$anio_sexo)
+  
   municipios_validos <- datos_total[
     Indicador1 == input$indicador_sexo &
     Ano == input$anio_sexo &
@@ -339,8 +334,8 @@ output$municipio_sexo_ui <- renderUI({
     as.numeric(Valor1) > 0,
     sort(unique(Municipio))
   ]
-
-
+  
+  
   pickerInput(
     inputId = "municipio_sexo",
     label = "Municipio",
@@ -358,9 +353,7 @@ output$municipio_sexo_ui <- renderUI({
   )
 })
 
-
 # Gráfica
-
 output$barPlotSexo <- renderPlotly({
   req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo)
   
@@ -384,21 +377,29 @@ output$barPlotSexo <- renderPlotly({
     by = .(Municipio, Categoria)
   ]
   
-  # asegurar que siempre aparezcan ambos sexos
-  sexos_completos <- data.table(Categoria = c("Masculino", "Femenino"))
+  # 🔥 completar combinaciones Municipio × Sexo
+  municipios <- unique(df_agg$Municipio)
+  sexos <- c("Masculino", "Femenino")
+  
+  combinaciones <- CJ(
+    Municipio = municipios,
+    Categoria = sexos
+  )
   
   df_agg <- merge(
+    combinaciones,
     df_agg,
-    sexos_completos,
-    by = "Categoria",
-    all = TRUE
+    by = c("Municipio", "Categoria"),
+    all.x = TRUE
   )
   
   df_agg[is.na(Valor), Valor := 0]
   
-  # colores
+  df_agg[, Categoria := factor(Categoria, 
+                               levels = c("Masculino", "Femenino"))]
+  
   colores_sexo <- c(
-    "Masculino" = "#344e41",
+    "Masculino" = "#344e41", 
     "Femenino" = "#a3b18a"
   )
   
