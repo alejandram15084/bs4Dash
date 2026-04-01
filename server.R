@@ -322,7 +322,7 @@ output$indicador_sexo_ui <- renderUI({
   )
 })
 
-
+# Municipio (dropdown pro 🔥)
 output$municipio_sexo_ui <- renderUI({
   req(input$indicador_sexo, input$anio_sexo)
   
@@ -335,7 +335,7 @@ output$municipio_sexo_ui <- renderUI({
     sort(unique(Municipio))
   ]
   
-
+  # mantener selección previa
   selected_prev <- isolate(input$municipio_sexo)
   
   if (!is.null(selected_prev)) {
@@ -344,7 +344,6 @@ output$municipio_sexo_ui <- renderUI({
     selected_final <- municipios_validos
   }
   
-  # si queda vacío → seleccionar todos
   if (length(selected_final) == 0) {
     selected_final <- municipios_validos
   }
@@ -383,11 +382,33 @@ output$barPlotSexo <- renderPlotly({
          "No hay datos disponibles para la selección realizada")
   )
   
+  # agregación
   df_agg <- df[
     !is.na(Valor1) & Valor1 > 0,
     .(Valor = mean(as.numeric(Valor1), na.rm = TRUE)),
     by = .(Municipio, Categoria)
   ]
+  
+  # 🔥 completar combinaciones Municipio × Sexo
+  municipios <- unique(df_agg$Municipio)
+  sexos <- c("Masculino", "Femenino")
+  
+  combinaciones <- CJ(
+    Municipio = municipios,
+    Categoria = sexos
+  )
+  
+  df_agg <- merge(
+    combinaciones,
+    df_agg,
+    by = c("Municipio", "Categoria"),
+    all.x = TRUE
+  )
+  
+  df_agg[is.na(Valor), Valor := 0]
+  
+  df_agg[, Categoria := factor(Categoria, 
+                               levels = c("Masculino", "Femenino"))]
   
   colores_sexo <- c(
     "Masculino" = "#344e41", 
@@ -412,6 +433,7 @@ output$barPlotSexo <- renderPlotly({
       paper_bgcolor = "white"
     )
 })
+
   # -------------------------------------------------------------------
   #  GRÁFICO POR GRUPO ETARIO
   # -------------------------------------------------------------------
