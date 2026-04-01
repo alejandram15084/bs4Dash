@@ -293,66 +293,125 @@ server <- function(input, output, session) {
         paper_bgcolor = "white"
       )
   })
-  # -------------------------------------------------------------------
-  #  GRÁFICO DE BARRAS POR SEXO 
-  # -------------------------------------------------------------------
-  output$indicador_sexo_ui <- renderUI({
-    req(input$tab_activa)
-    indicadores_tab <- indicadores_categoria[[input$tab_activa]]
-    if (is.null(indicadores_tab)) {
-      indicadores_tab <- sort(unique(datos_total$Indicador1))
-    }
-    indicadores_validos_sexo <- datos_total[
-      Indicador1 %in% indicadores_tab &
-      !is.na(Valor1) &
-      as.numeric(Valor1) > 0,
-      sort(unique(Indicador1))
-    ]
-    selectInput(
-      inputId = "indicador_sexo",
-      label = "Indicador",
-      choices = indicadores_validos_sexo,
-      selected = indicadores_validos_sexo
+# -------------------------------------------------------------------
+#  GRÁFICO DE BARRAS POR SEXO 
+# -------------------------------------------------------------------
+
+# Indicador
+output$indicador_sexo_ui <- renderUI({
+  req(input$tab_activa)
+  
+  indicadores_tab <- indicadores_categoria[[input$tab_activa]]
+  
+  if (is.null(indicadores_tab)) {
+    indicadores_tab <- sort(unique(datos_total$Indicador1))
+  }
+  
+  indicadores_validos_sexo <- datos_total[
+    Indicador1 %in% indicadores_tab &
+    !is.na(Valor1) &
+    as.numeric(Valor1) > 0,
+    sort(unique(Indicador1))
+  ]
+  
+  selectInput(
+    inputId = "indicador_sexo",
+    label = "Indicador",
+    choices = indicadores_validos_sexo,
+    selected = indicadores_validos_sexo
+  )
+})
+
+
+output$municipio_sexo_ui <- renderUI({
+  req(input$indicador_sexo, input$anio_sexo)
+  
+  municipios_validos <- datos_total[
+    Indicador1 == input$indicador_sexo &
+    Ano == input$anio_sexo &
+    Tipo == "Sexo" &
+    !is.na(Valor1) &
+    as.numeric(Valor1) > 0,
+    sort(unique(Municipio))
+  ]
+  
+
+  selected_prev <- isolate(input$municipio_sexo)
+  
+  if (!is.null(selected_prev)) {
+    selected_final <- intersect(selected_prev, municipios_validos)
+  } else {
+    selected_final <- municipios_validos
+  }
+  
+  # si queda vacío → seleccionar todos
+  if (length(selected_final) == 0) {
+    selected_final <- municipios_validos
+  }
+  
+  pickerInput(
+    inputId = "municipio_sexo",
+    label = "Municipio",
+    choices = municipios_validos,
+    selected = selected_final,
+    multiple = TRUE,
+    options = list(
+      `actions-box` = TRUE,
+      `live-search` = TRUE,
+      `none-selected-text` = "Todos los municipios",
+      `select-all-text` = "Seleccionar todos",
+      `deselect-all-text` = "Quitar todos",
+      `selected-text-format` = "count > 3"
     )
-  })
-  output$barPlotSexo <- renderPlotly({
-    req(input$indicador_sexo, input$anio_sexo)
-    df <- datos_total[
-      Indicador1 == input$indicador_sexo &
-      Ano == input$anio_sexo &
-      Tipo == "Sexo" &
-      Categoria != "Total"
-    ]
-    validate(
-      need(nrow(df) > 0,
-      "No hay datos disponibles para el indicador o año seleccionados")
+  )
+})
+
+# Gráfica
+output$barPlotSexo <- renderPlotly({
+  req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo)
+  
+  df <- datos_total[
+    Indicador1 == input$indicador_sexo &
+    Ano == input$anio_sexo &
+    Tipo == "Sexo" &
+    Categoria != "Total" &
+    Municipio %in% input$municipio_sexo
+  ]
+  
+  validate(
+    need(nrow(df) > 0,
+         "No hay datos disponibles para la selección realizada")
+  )
+  
+  df_agg <- df[
+    !is.na(Valor1) & Valor1 > 0,
+    .(Valor = mean(as.numeric(Valor1), na.rm = TRUE)),
+    by = .(Municipio, Categoria)
+  ]
+  
+  colores_sexo <- c(
+    "Masculino" = "#344e41", 
+    "Femenino" = "#a3b18a"
+  )
+  
+  plot_ly(
+    data = df_agg,
+    x = ~Municipio,
+    y = ~Valor,
+    color = ~Categoria,
+    colors = colores_sexo,
+    type = "bar",
+    hovertemplate = "Municipio: %{x}<br>Valor: %{y}<extra></extra>"
+  ) %>%
+    layout(
+      barmode = "group",
+      xaxis = list(title = "Municipio", tickangle = -45),
+      yaxis = list(title = "Valor"),
+      legend = list(title = list(text = "<b>Sexo</b>")),
+      plot_bgcolor = "white",
+      paper_bgcolor = "white"
     )
-    df_agg <- df[
-      !is.na(Valor1) & Valor1 > 0,
-      .(Valor = mean(as.numeric(Valor1), na.rm = TRUE)),
-      by = .(Municipio, Categoria)
-    ]
-    colores_sexo <- c("Masculino" = "#344e41", 
-                      "Femenino" = "#a3b18a")
-    plot_ly(
-      data = df_agg,
-      x = ~Municipio,
-      y = ~Valor,
-      color = ~Categoria,
-      colors = colores_sexo,
-      type = "bar",
-      hovertemplate = "Municipio: %{x}<br>Valor: %{y}<extra></extra>"
-    ) %>%
-      layout(
-        #title = paste(input$indicador_sexo, "por sexo"),
-        barmode = "group",
-        xaxis = list(title = "Municipio", tickangle = -45),
-        yaxis = list(title = "Valor"),
-        legend = list(title = list(text = "<b>Sexo</b>")),
-        plot_bgcolor = "white",
-        paper_bgcolor = "white"
-      )
-  })
+})
   # -------------------------------------------------------------------
   #  GRÁFICO POR GRUPO ETARIO
   # -------------------------------------------------------------------

@@ -176,8 +176,12 @@ ui <- bs4DashPage(
               title = "Comparación por sexo",
               fluidRow(
                 column(
-                  width = 8,
+                  width = 6,
                   uiOutput("indicador_sexo_ui")
+                ),
+                column(
+                  width = 3,
+                  uiOutput("municipio_sexo_ui")
                 ),
                 column(
                   width = 3,
