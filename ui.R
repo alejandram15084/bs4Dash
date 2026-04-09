@@ -8,7 +8,7 @@ ui <- bs4DashPage(
     title = dashboardBrand(
       title = "Dashboard",
       color = "gray-dark",
-      href = "https://www.udea.edu.co/wps/portal/udea/web/inicio",
+      href = "#",
       image = "log.png"
     ),
     skin = "light",

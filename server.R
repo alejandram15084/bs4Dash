@@ -148,12 +148,12 @@ server <- function(input, output, session) {
       opciones <- datos_total[Tipo == "Sexo", sort(unique(Categoria))]
       selectInput("categoria", "Sexo",
                   choices = opciones,
-                  selected = "Total")
+                  selected = opciones[1])
     } else if (input$tipo == "Edad") {
       opciones <- datos_total[Tipo == "Edad", sort(unique(Categoria))]
       selectInput("categoria", "Grupo etario",
                   choices = opciones,
-                  selected = "Total")
+                  selected = opciones[1])
     } else {
       return(NULL)
     }
@@ -230,6 +230,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "year_min", selected = min(anios))
     updateSelectInput(session, "year_max", selected = max(anios))
     updateSelectInput(session, "tipo", selected = "Geografia")
+    updateSelectInput(session, "categoria", selected = NULL)
     req(input$indicador)
     municipios_disp <- datos_total[Indicador1 == input$indicador, sort(unique(Municipio))]
     updatePickerInput(session, "muni",
@@ -377,7 +378,6 @@ output$barPlotSexo <- renderPlotly({
     by = .(Municipio, Categoria)
   ]
   
-  # 🔥 completar combinaciones Municipio × Sexo
   municipios <- unique(df_agg$Municipio)
   sexos <- c("Masculino", "Femenino")
   

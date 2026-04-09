@@ -225,19 +225,32 @@
 
 .scroll-top-button {
   position: fixed;
-  bottom: 30px;
+  bottom: 15px;
   right: 30px;
-  background-color: #47984D; /* Verde intermedio */
+  background-color: #47984D; 
   color: white;
   border: none;
   border-radius: 50%;
-  padding: 12px 16px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   font-size: 18px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  display: none; /* Oculto por defecto */
+  display: none;
   z-index: 9999;
   transition: background-color 0.3s ease;
+  line-height: 1;
+}
+.scroll-top-button i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 /* Hover */
@@ -280,4 +293,18 @@
 
     font-weight: 500;
 
+}
+
+/* Oculta el icono original */
+.main-header [data-widget="pushmenu"] i {
+  display: none;
+}
+
+/* Inserta nuevo icono */
+.main-header [data-widget="pushmenu"]::before {
+  content: "\f0ca"; 
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size: 18px;
+  color: inherit;
 }
