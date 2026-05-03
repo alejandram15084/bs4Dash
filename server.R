@@ -677,7 +677,7 @@ output$barPlotSexo <- renderPlotly({
     top10_causas <- df_year %>% 
       filter(Tipo == "Geografia", Categoria == "Geografia") %>% 
       group_by(Indicador1) %>% 
-      summarise(valor_total = mean(as.numeric(Valor1), na.rm = TRUE), .groups = "drop") %>% 
+      summarise(valor_total = sum(as.numeric(Valor1), na.rm = TRUE), .groups = "drop") %>% 
       filter(!is.na(valor_total) & valor_total > 0) %>% 
       arrange(desc(valor_total)) %>% 
       slice_head(n = 10) %>%
@@ -803,7 +803,7 @@ output$barPlotSexo <- renderPlotly({
     )
     top10_causas <- df_year_a[
       Tipo == "Geografia" & Categoria == "Geografia" & !is.na(Valor1) & Valor1 > 0,
-      .(valor_total = mean(Valor1, na.rm = TRUE)),
+      .(valor_total = sum(Valor1, na.rm = TRUE)),
       by = Indicador1
     ][order(-valor_total)][1:10]
     validate(
@@ -859,7 +859,7 @@ output$barPlotSexo <- renderPlotly({
     )
     top10_causas_h <- df_year_h[
       Tipo == "Geografia" & Categoria == "Geografia" & !is.na(Valor1) & Valor1 > 0,
-      .(valor_total = mean(Valor1, na.rm = TRUE)),
+      .(valor_total = sum(Valor1, na.rm = TRUE)),
       by = Indicador1
     ][order(-valor_total)][1:10]
     validate(

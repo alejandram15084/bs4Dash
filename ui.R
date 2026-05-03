@@ -244,7 +244,7 @@ tags$li(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
-              title = "Promedio regional de años de vida potencialmente perdidos",
+              title = "Total regional de años de vida potencialmente perdidos",
               uiOutput("anio_seleccionado_ui"),
               plotlyOutput("grafico_top_causas", height = "400px")  
               %>% withSpinner(color = "black")
@@ -260,7 +260,7 @@ tags$li(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
-              title = "Promedio regional de atenciones",
+              title = "Total regional de atenciones",
               uiOutput("anio_atencion_ui"),
               plotlyOutput("grafico_top_atencion", height = "400px")
               %>% withSpinner(color = "black")
@@ -276,7 +276,7 @@ tags$li(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
-              title = "Promedio regional de hospitalizaciones",
+              title = "Total regional de hospitalizaciones",
               uiOutput("anio_hospitalizacion_ui"),
               plotlyOutput("grafico_top_hospitalizacion", height = "400px")
               %>% withSpinner(color = "black")
