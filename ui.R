@@ -16,7 +16,7 @@ tags$li(
       class = "nav-item d-none d-sm-inline-block",
       style = "line-height: 1.2; margin-left: 20px; margin-top: 5px;",
       tags$div(
-        tags$strong("Visualización de Indicadores de Salud Mental", 
+        tags$strong("Visualizador de Indicadores de Salud Mental", 
                     style = "font-size: 1.3rem; color: #1f2d3d; display: block;"),
         tags$span("Oriente Antioqueño", 
                    style = "font-size: 0.9rem; color: #6c757d; display: block;")
@@ -127,7 +127,7 @@ tags$li(
             )
           )
         ),
-        br(),
+        #br(),
         # ================== GRÁFICO DE LINEAS PRINCIPAL ===================
         # FILTRO GLOBAL
         fluidRow(
@@ -166,7 +166,7 @@ tags$li(
             width = 12,
             status = "primary",
             solidHeader = TRUE,
-            #title = "Serie temporal",
+            title = uiOutput("titulo_linePlot"),
             collapsible = FALSE,
             br(),
             plotlyOutput("linePlot", height = "400px")
@@ -349,7 +349,7 @@ tags$li(
             width = 12,
             status = "primary",
             solidHeader = TRUE,
-            #title = "Serie temporal",
+            title = uiOutput("titulo_grafico_suicidio"),
             collapsible = FALSE,
             br(),
             plotlyOutput("grafico_suicidio", height = "400px")
@@ -409,7 +409,7 @@ tags$li(
             width = 12,
             status = "primary",
             solidHeader = TRUE,
-            #title = "Serie temporal",
+            title = uiOutput("titulo_grafico_demencia"),
             collapsible = FALSE,
             br(),
             plotlyOutput("grafico_demencia", height = "400px")
@@ -443,7 +443,7 @@ tags$li(
             solidHeader = TRUE,
             width = 12,
             collapsible = FALSE,
-            
+
             fluidRow(
               column(8, uiOutput("indicador_servicios_ui")),
               column(4, uiOutput("muni_servicios_ui"))
@@ -477,6 +477,7 @@ tags$li(
             status = "primary",
             solidHeader = TRUE,
             collapsible = FALSE,
+            title = uiOutput("titulo_grafico_servicios"),
             br(),
             plotlyOutput("grafico_servicios", height = "400px") %>%
               withSpinner(color = "black")

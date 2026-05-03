@@ -12,7 +12,7 @@ server <- function(input, output, session) {
       "Atención"         = "Porcentaje de personas atendidas en los servicios de salud por una causa específica frente al total de atenciones registradas.",
       "Hospitalización"  = "Proporción de personas que están hospitalizadas en los servicios de salud por una causa específica frente al total de hospitalizaciones.",
       "Mortalidad"       = "Número de muertes por 100.000 personas que ocurrirían si la población tuviera la misma estructura de edad que la población estándar.",
-      "Letalidad"        = "Porcentaje de personas que mueren por lesiones autoinflingidas intencionalmente entre las personas con diagnóstico de lesiones autoinflingidas intencionalmente."
+      "Letalidad"        = "Porcentaje de personas que mueren por lesiones autoinfligidas intencionalmente entre las personas con diagnóstico de lesiones autoinfligidas intencionalmente."
     )
     HTML(definicion)
   })
@@ -32,46 +32,50 @@ server <- function(input, output, session) {
   # KPIs
   # -------------------------------------------------------------------
   # Función para obtener max/min
-  kpi_max_min <- function(df, columna, tipo = "max") {
-    if (nrow(df) == 0) return(NA)
-    # Agrupar y sumar
-    agg_df <- df[, .(valor = sum(Valor1, na.rm = TRUE)), by = c(columna)]
-    #Si todos los valores son 0
-    if (all(agg_df$valor == 0)) return("Sin reporte")
-    # Ordenar
-    if (tipo == "max") {
-      setorder(agg_df, -valor)
-    } else {
-      setorder(agg_df, valor)
-    }
-    # Devolver el primer valor
-    return(agg_df[[columna]][1])
-  }
-  # Función para calcular KPIs según pestaña
   calcular_kpis <- function(df, tab_activa) {
-    req(nrow(df) > 0)
-    ultimo_anio <- max(df$Ano, na.rm = TRUE)
-    df_ultimo_anio <- df[Ano == ultimo_anio]
-    req(nrow(df_ultimo_anio) > 0)
-    total <- round(sum(df_ultimo_anio$Valor1, na.rm = TRUE), 0)
-    promedio <- round(mean(df_ultimo_anio$Valor1, na.rm = TRUE), 2)
-    mayor_mpio <- kpi_max_min(df_ultimo_anio, "Municipio", "max")
-    menor_mpio <- kpi_max_min(df_ultimo_anio, "Municipio", "min")
-    list(
-      total = total,
-      promedio = promedio,
-      mayor_mpio = mayor_mpio,
-      menor_mpio = menor_mpio,
-      ultimo_anio = ultimo_anio
-    )
+  req(nrow(df) > 0)
+  ultimo_anio  <- max(df$Ano, na.rm = TRUE)
+  df_ult       <- df[Ano == ultimo_anio]
+  req(nrow(df_ult) > 0)
 
+  agg_df <- df_ult[, .(valor = sum(Valor1, na.rm = TRUE)), by = Municipio]
+  agg_df <- agg_df[!is.na(valor) & valor > 0]
+
+  total    <- round(sum(df_ult$Valor1, na.rm = TRUE), 0)
+  promedio <- round(mean(df_ult$Valor1, na.rm = TRUE), 2)
+
+  if (nrow(agg_df) == 0) {
+    mayor_mpio <- "Sin reporte"
+    menor_mpio <- "Sin reporte"
+  } else if (nrow(agg_df) == 1) {
+    mayor_mpio <- agg_df$Municipio[1]
+    menor_mpio <- "__UNICO__"          # fix del punto 1 de ayer
+  } else {
+    setorder(agg_df, -valor)
+    mayor_mpio <- agg_df$Municipio[1]
+    setorder(agg_df, valor)
+    menor_mpio <- agg_df$Municipio[1]
   }
+
+  list(total = total, promedio = promedio,
+       mayor_mpio = mayor_mpio, menor_mpio = menor_mpio,
+       ultimo_anio = ultimo_anio)
+}
   # Reactive que calcula KPIs según la pestaña activa y filtros
   kpi_cache <- reactive({
     req(input$tab_activa)
     df <- data_filtrada()
     calcular_kpis(df, input$tab_activa)
-  })
+  }) |> bindCache(
+    input$indicador,
+    input$muni,
+    input$year_min,
+    input$year_max,
+    input$tipo,
+    input$categoria,
+    input$tab_activa,
+    cache = "app"
+  )
   # Renderizado de los KPI boxes
   output$kpi_boxes <- renderUI({
     req(kpi_cache())
@@ -95,14 +99,21 @@ server <- function(input, output, session) {
                             "Municipio mayor letalidad",
                             "Municipio menor letalidad")
     )
-    repite_municipio <- is.na(kpis$mayor_mpio) || 
-                      is.na(kpis$menio_mpio) || 
-                      (kpis$total == 0) || 
-                      (kpis$mayor_mpio == kpis$menor_mpio)
+    sin_datos    <- is.na(kpis$mayor_mpio) || kpis$total == 0 ||
+      kpis$mayor_mpio == "Sin reporte"
+        solo_uno     <- !sin_datos && (kpis$menor_mpio == "__UNICO__")
+        un_municipio <- !sin_datos && !solo_uno && (kpis$mayor_mpio == kpis$menor_mpio)
 
-  valor_mayor <- if(repite_municipio && kpis$total == 0) "N/A" else kpis$mayor_mpio
-  valor_menor <- if(repite_municipio && kpis$total == 0) "N/A" else kpis$menor_mpio
-
+    valor_mayor <- if (sin_datos) "N/A" else kpis$mayor_mpio
+              valor_menor <- if (sin_datos) {
+                "N/A"
+              } else if (solo_uno) {
+                "—"          # solo un municipio reporta → mínimo vacío
+              } else if (un_municipio) {
+                kpis$mayor_mpio
+              } else {
+                kpis$menor_mpio
+              }
 
     fluidRow(
       #Caja 1 Total
@@ -119,11 +130,11 @@ server <- function(input, output, session) {
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3),
       #Caja 3 Mayor
       bs4InfoBox(title = titulos[[input$tab_activa]][3],
-                 value = kpis$mayor_mpio, icon = icon("map-marker-alt"),
+                 value = valor_mayor, icon = icon("map-marker-alt"),
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3),
       #Caja 4 Menor
       bs4InfoBox(title = titulos[[input$tab_activa]][4],
-                 value = kpis$menor_mpio, icon = icon("map-marker"),
+                 value = valor_menor, icon = icon("map-marker"),
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3)
     )
   })
@@ -148,22 +159,76 @@ server <- function(input, output, session) {
   })
 
   # -------------------------------------------------------------------
+  # TÍTULOS DINÁMICOS DE GRÁFICOS DE LÍNEAS
+  # -------------------------------------------------------------------
+
+  # Título del gráfico principal de indicadores
+  output$titulo_linePlot <- renderUI({
+    req(input$indicador, input$year_min, input$year_max)
+    span(
+      style = "font-size: 0.95rem;",
+      input$indicador,
+      tags$small(
+        style = "color: #6c757d; margin-left: 8px;",
+        paste0("(", input$year_min, " – ", input$year_max, ")")
+      )
+    )
+  })
+
+  # Título del gráfico de tasa de intento de suicidio
+  output$titulo_grafico_suicidio <- renderUI({
+    req(input$indicador_suicidio, input$year_min_suicidio, input$year_max_suicidio)
+    span(
+      style = "font-size: 0.95rem;",
+      input$indicador_suicidio,
+      tags$small(
+        style = "color: #6c757d; margin-left: 8px;",
+        paste0("(", input$year_min_suicidio, " – ", input$year_max_suicidio, ")")
+      )
+    )
+  })
+
+  # Título del gráfico de demencia
+  output$titulo_grafico_demencia <- renderUI({
+    req(input$indicador_demencia, input$year_min_demencia, input$year_max_demencia)
+    span(
+      style = "font-size: 0.95rem;",
+      input$indicador_demencia,
+      tags$small(
+        style = "color: #6c757d; margin-left: 8px;",
+        paste0("(", input$year_min_demencia, " – ", input$year_max_demencia, ")")
+      )
+    )
+  })
+
+
+  # Título del gráfico de servicios
+  output$titulo_grafico_servicios <- renderUI({
+    req(input$indicador_servicios, input$year_min_servicios, input$year_max_servicios)
+    span(
+      style = "font-size: 0.95rem;",
+      input$indicador_servicios,
+      tags$small(
+        style = "color: #6c757d; margin-left: 8px;",
+        paste0("(", input$year_min_servicios, " – ", input$year_max_servicios, ")")
+      )
+    )
+  })
+  # -------------------------------------------------------------------
   # FILTROS DE AÑOS (UI dinámico)
   # -------------------------------------------------------------------
 
   observeEvent(input$year_min, ignoreInit = TRUE, {
-    req(input$year_min)
-    valid_max <- anios[anios >= input$year_min]
-    sel <- if (!is.null(input$year_max) && input$year_max %in% valid_max)
-      input$year_max else max(valid_max)
-    updateSelectInput(session, "year_max", choices = valid_max, selected = sel)
+    req(input$year_min, input$year_max)
+    if (as.numeric(input$year_min) > as.numeric(input$year_max)) {
+      updateSelectInput(session, "year_max", selected = input$year_min)
+    }
   })
   observeEvent(input$year_max, ignoreInit = TRUE, {
-    req(input$year_max)
-    valid_min <- anios[anios <= input$year_max]
-    sel <- if (!is.null(input$year_min) && input$year_min %in% valid_min)
-      input$year_min else min(valid_min)
-    updateSelectInput(session, "year_min", choices = valid_min, selected = sel)
+    req(input$year_min, input$year_max)
+    if (as.numeric(input$year_max) < as.numeric(input$year_min)) {
+      updateSelectInput(session, "year_min", selected = input$year_max)
+    }
   })
   # -------------------------------------------------------------------
   # TIPO / CATEGORIA 
@@ -210,7 +275,7 @@ server <- function(input, output, session) {
   output$muni_ui <- renderUI({
     req(input$indicador)
     municipios_disp <- municipios_disponibles()
-    defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+    defaults <- MUNICIPIOS_DEFAULT
     selected_defaults <- intersect(defaults, municipios_disp)
     if (length(selected_defaults) == 0) {
       selected_defaults <- head(municipios_disp, 5)
@@ -280,6 +345,10 @@ server <- function(input, output, session) {
   # -------------------------------------------------------------------
   # DISPARADOR INICIAL Y AL CAMBIAR DE PESTAÑA
   # -------------------------------------------------------------------
+  municipios_disponibles <- reactive({
+    req(input$indicador)
+    datos_total[Indicador1 == input$indicador, sort(unique(Municipio))]
+  })
   observeEvent(input$tab_activa, {
     if (!is.null(indicadores_categoria[[input$tab_activa]])) {
       primeros <- indicadores_categoria[[input$tab_activa]][1]
@@ -292,10 +361,6 @@ server <- function(input, output, session) {
     updateSelectInput(session, "year_max", 
                       choices = anios, 
                       selected = max(anios))
-  })
-  municipios_disponibles <- reactive({
-    req(input$indicador)
-    datos_total[Indicador1 == input$indicador, sort(unique(Municipio))]
   })
   # -------------------------------------------------------------------
   #  GRÁFICO DE LÍNEAS 
@@ -311,22 +376,13 @@ server <- function(input, output, session) {
     
     # 3. Definir el título del eje Y dinámicamente según la ficha técnica
     # Se usa el nombre exacto de tus pestañas en server_3.R
-    titulo_eje_y <- switch(input$tab_activa,
-      "Infraestructura" = "Número",
-      "Años Perdidos"   = "Tasa por 100.000 personas",
-      "Atención"        = "Porcentaje (%)",
-      "Hospitalización" = "Porcentaje (%)",
-      "Mortalidad"      = "Tasa por 100.000 personas",
-      "Letalidad"       = "Porcentaje (%)",
-      "Valor" # Nombre por defecto
-    )
+    titulo_eje_y <- etiqueta_eje_y(input$tab_activa)
     
     # 4. Agrupar los datos por Año y Municipio
-    df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor1, na.rm = TRUE)), 
+    df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor1, na.rm = TRUE)),
                           by = .(Ano, Municipio)]
-    
-    # 5. Ordenar internamente para asegurar la jerarquía en el hover
     setorder(df_agg, Ano, -Valor_Plot)
+    df_agg[, Ano := factor(Ano)]
 
     # 6. Construcción del gráfico
     plot_ly(
@@ -362,7 +418,13 @@ server <- function(input, output, session) {
         # Mostrar la leyenda de forma normal
         legend = list(traceorder = "normal")
       )
-  })
+  }) |> bindCache(
+    input$indicador, input$muni,
+    input$year_min,  input$year_max,
+    input$tipo,      input$categoria,
+    input$tab_activa,
+    cache = "app"
+  )
 # -------------------------------------------------------------------
 #  GRÁFICO DE BARRAS POR SEXO 
 # -------------------------------------------------------------------
@@ -404,11 +466,19 @@ output$municipio_sexo_ui <- renderUI({
     sort(unique(Municipio))
   ]
   
+  seleccion_previa <- isolate(input$municipio_sexo)
+  municipios_a_seleccionar <- if (!is.null(seleccion_previa)) {
+    prev_validos <- intersect(seleccion_previa, municipios_validos)
+    if (length(prev_validos) > 0) prev_validos else municipios_validos
+  } else {
+    municipios_validos
+  }
+  
   pickerInput(
     inputId = "municipio_sexo",
     label = "Municipio",
     choices = municipios_validos,
-    selected = municipios_validos,
+    selected = municipios_a_seleccionar,
     multiple = TRUE,
     options = list(
       `actions-box` = TRUE,
@@ -426,15 +496,7 @@ output$barPlotSexo <- renderPlotly({
   req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo, input$tab_activa)
   
   # 1. Definir la unidad de medida según la categoría técnica del indicador
-  titulo_eje_y <- switch(input$tab_activa,
-    "Infraestructura" = "Número",
-    "Años Perdidos"   = "Tasa por 100.000 personas",
-    "Atención"        = "Porcentaje (%)",
-    "Hospitalización" = "Porcentaje (%)",
-    "Mortalidad"      = "Tasa por 100.000 personas",
-    "Letalidad"       = "Porcentaje (%)",
-    "Valor" # Etiqueta genérica si no hay coincidencia
-  )
+  titulo_eje_y <- etiqueta_eje_y(input$tab_activa)
 
   df <- datos_total[
     Indicador1 == input$indicador_sexo &
@@ -501,7 +563,11 @@ output$barPlotSexo <- renderPlotly({
       plot_bgcolor = "white",
       paper_bgcolor = "white"
     )
-})
+}) |> bindCache(
+    input$indicador_sexo, input$anio_sexo,
+    input$municipio_sexo, input$tab_activa,
+    cache = "app"
+  )
 
   # -------------------------------------------------------------------
   #  GRÁFICO POR GRUPO ETARIO
@@ -579,15 +645,7 @@ output$barPlotSexo <- renderPlotly({
     
     # 2. Lógica para el Título del Eje Y dinámico
     # Esto asegura que la unidad de medida sea técnicamente correcta
-    titulo_eje_y <- switch(input$tab_activa,
-      "Infraestructura" = "Número",
-      "Años Perdidos"   = "Tasa por 100.000 personas",
-      "Atención"        = "Porcentaje (%)",
-      "Hospitalización" = "Porcentaje (%)",
-      "Mortalidad"      = "Tasa por 100.000 personas",
-      "Letalidad"       = "Porcentaje (%)",
-      "Valor" # Nombre por defecto si no coincide ninguno
-    )
+    titulo_eje_y <- etiqueta_eje_y(input$tab_activa)
 
     # 3. Filtrado y preparación de datos
     df <- datos_total[
@@ -629,21 +687,19 @@ output$barPlotSexo <- renderPlotly({
         paper_bgcolor = "white",
         showlegend = FALSE # Opcional: oculta la leyenda si los colores son por categoría
       )
-  })
+  }) |> bindCache(
+    input$indicador_edad, input$anio_edad,
+    input$municipio_edad, input$tab_activa,
+    cache = "app"
+  )
   # ------------------------------------------------------------------- 
   # GRÁFICO DE BARRAS: PRINCIPALES CAUSAS AÑOS PERDIDOS 
   # ------------------------------------------------------------------- 
   
-  # --- FUNCIÓN DE AYUDA PARA SALTO DE LÍNEA ---
-  wrap_text <- function(text, width = 80) {
-    wrapped <- stringr::str_wrap(text, width = width)
-    return(gsub("\\n", "<br>", wrapped))
-  }
-
   # --- Selector dinámico de año ---
   output$anio_seleccionado_ui <- renderUI({ 
     df <- datos_total [
-        str_detect(Indicador1, regex("año|vida|perd", ignore_case = TRUE)) &
+        Indicador1 %chin% indicadores_avpp &
         Tipo == "Geografia" &
         Categoria == "Geografia" &
         !is.na(Valor1) & Valor1 > 0
@@ -663,25 +719,23 @@ output$barPlotSexo <- renderPlotly({
   output$grafico_top_causas <- renderPlotly({ 
     req(input$tab_activa == "Años Perdidos") 
     
-    df <- datos_total %>% 
-      filter(str_detect(Indicador1, regex("año|vida|perd", ignore_case = TRUE))) 
+    df <- datos_total[Indicador1 %chin% indicadores_avpp]
     
     selected_year <- input$anio_seleccionado %||% max(df$Ano, na.rm = TRUE)
-    df_year <- df %>% filter(Ano == selected_year)
+    df_year <- df[Ano == selected_year]
     
     validate( 
       need(nrow(df_year) > 0, paste("No hay datos para el año", selected_year))
     ) 
 
     # --- Agrupar y calcular el top 10 de causas ---
-    top10_causas <- df_year %>% 
-      filter(Tipo == "Geografia", Categoria == "Geografia") %>% 
-      group_by(Indicador1) %>% 
-      summarise(valor_total = sum(as.numeric(Valor1), na.rm = TRUE), .groups = "drop") %>% 
-      filter(!is.na(valor_total) & valor_total > 0) %>% 
-      arrange(desc(valor_total)) %>% 
-      slice_head(n = 10) %>%
-      mutate(Indicador_wrap = wrap_text(Indicador1, width = 80))
+    top10_causas <- df_year[
+      Tipo == "Geografia" & Categoria == "Geografia" &
+      !is.na(Valor1) & as.numeric(Valor1) > 0,
+      .(valor_total = sum(as.numeric(Valor1), na.rm = TRUE)),
+      by = Indicador1
+    ][order(-valor_total)][1:min(.N, 10)
+    ][, Indicador_wrap := wrap_text(Indicador1, width = 80)]
     
     validate(need(nrow(top10_causas) > 0, "No hay causas con valores disponibles")) 
 
@@ -717,7 +771,11 @@ output$barPlotSexo <- renderPlotly({
         paper_bgcolor = "white",
         showlegend = FALSE
       )
-  })
+  }) |> bindCache(
+    input$anio_seleccionado,
+    input$tab_activa,
+    cache = "app"
+  )
   # -------------------------------------------------------------------
   #  GRÁFICO DE BARRAS: LESIONES AUTOINFLIGIDAS INTENCIONALMENTE
   # -------------------------------------------------------------------
@@ -763,19 +821,22 @@ output$barPlotSexo <- renderPlotly({
       marker = list(color = "#588157")
     ) %>%
       layout(
-        #title = paste("Letalidad por lesiones autoinfligidas intencionalmente en", selected_year),
         xaxis = list(title = "Tasa de letalidad"),
         yaxis = list(title = "", automargin = TRUE),
         plot_bgcolor = "white",
         paper_bgcolor = "white"
       )
-  })
+  }) |> bindCache(
+    input$anio_letalidad,
+    input$tab_activa,
+    cache = "app"
+  )
   # -------------------------------------------------------------------
   #  GRÁFICO DE BARRAS: PRINCIPALES CAUSAS ATENCIÓN
   # -------------------------------------------------------------------
   output$anio_atencion_ui <- renderUI({
     anios_disponibles <- datos_total[
-      str_detect(Indicador1, regex("atendid", ignore_case = TRUE)) & 
+      Indicador1 %chin% indicadores_atencion &
       Tipo == "Geografia" &
       Categoria == "Geografia" &
       !is.na(Valor1) & Valor1 > 0,
@@ -796,7 +857,7 @@ output$barPlotSexo <- renderPlotly({
     selected_year_a <- input$anio_atencion
     df_year_a <- datos_total[
       Ano == selected_year_a &
-      str_detect(Indicador1, regex("atendid", ignore_case = TRUE))
+      Indicador1 %chin% indicadores_atencion
     ]
     validate(
       need(nrow(df_year_a) > 0, paste("No hay datos para el año", selected_year_a))
@@ -822,17 +883,20 @@ output$barPlotSexo <- renderPlotly({
       marker = list(color = "#588157")
     ) %>%
       layout(
-        #title = paste("Promedio de principales causas de atención en", selected_year_a),
         xaxis = list(title = "Casos de atención"),
         yaxis = list(title = "")
       )
-  })
+  }) |> bindCache(
+    input$anio_atencion,
+    input$tab_activa,
+    cache = "app"
+  )
   # -------------------------------------------------------------------
   #  GRÁFICO DE BARRAS: PRINCIPALES CAUSAS HOSPITALIZACIÓN
   # -------------------------------------------------------------------
   output$anio_hospitalizacion_ui <- renderUI({
     anios_disponibles <- datos_total[
-      str_detect(Indicador1, regex("hospitalizad", ignore_case = TRUE)) &
+      Indicador1 %chin% indicadores_hospitalizacion &
       Tipo == "Geografia" &
       Categoria == "Geografia" &
       !is.na(Valor1) & Valor1 > 0,
@@ -852,7 +916,7 @@ output$barPlotSexo <- renderPlotly({
     selected_year_h <- input$anio_hospitalizacion
     df_year_h <- datos_total[
       Ano == selected_year_h &
-      str_detect(Indicador1, regex("hospitalizad", ignore_case = TRUE))
+      Indicador1 %chin% indicadores_hospitalizacion
     ]
     validate(
       need(nrow(df_year_h) > 0, paste("No hay datos para el año", selected_year_h))
@@ -878,11 +942,14 @@ output$barPlotSexo <- renderPlotly({
       marker = list(color = "#588157")
     ) %>%
       layout(
-        #title = paste("Promedio de principales causas de hospitalización en", selected_year_h),
-        xaxis = list(title = "Casos de hostpitalización"),
+        xaxis = list(title = "Casos de hospitalización"),
         yaxis = list(title = "")
       )
-  })
+  }) |> bindCache(
+    input$anio_hospitalizacion,
+    input$tab_activa,
+    cache = "app"
+  )
   # -------------------------------------------------------------------
   # INDICADOR DEMENCIA: GRÁFICO DE LÍNEAS
   # -------------------------------------------------------------------
@@ -900,7 +967,7 @@ output$barPlotSexo <- renderPlotly({
     municipios_disp_demencia <- datos_demencia[Indicador11 == input$indicador_demencia]
     municipios_disp_demencia <- sort(unique(municipios_disp_demencia$Municipio))
 
-    defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+    defaults <- MUNICIPIOS_DEFAULT
     selected_defaults <- intersect(defaults, municipios_disp_demencia)
 
     if (length(selected_defaults) == 0) {
@@ -1015,11 +1082,9 @@ output$barPlotSexo <- renderPlotly({
     df_filtrado <- datos_filtrados_demencia() 
     validate(need(nrow(df_filtrado) > 0,
     "No hay datos disponibles para los filtros seleccionados."))
-    df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor, na.rm = TRUE)), 
-                            by = .(Año, Municipio)]
-    
-    df_agg <- df_agg %>%
-        mutate(Año = factor(Año))
+    df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor, na.rm = TRUE)),
+                            by = .(Año, Municipio)
+                          ][, Año := factor(Año)]
     #  Plot
     plot_ly(df_agg, 
             x = ~Año,
@@ -1033,7 +1098,6 @@ output$barPlotSexo <- renderPlotly({
             #opacity = 1
             ) %>%
       layout(
-        #title = input$indicador_demencia, 
         xaxis = list(title = "Año"),
         yaxis = list(title = "Porcentaje (%)"),
         hovermode = "x unified",
@@ -1045,7 +1109,13 @@ output$barPlotSexo <- renderPlotly({
         plot_bgcolor = "white", 
         paper_bgcolor = "white" 
       )
-  })
+  }) |> bindCache(
+    input$indicador_demencia,
+    input$municipio_demencia,
+    input$year_min_demencia,  input$year_max_demencia,
+    input$tipo_demencia,      input$categoria_demencia,
+    cache = "app"
+  )
   # --- Botones: Actualizar y Limpiar ---
   observeEvent(input$reset_filters_demencia, {
     req(input$indicador_demencia)
@@ -1053,7 +1123,7 @@ output$barPlotSexo <- renderPlotly({
     municipios_disp_demencia <- datos_demencia[Indicador11 == input$indicador_demencia]
     municipios_disp_demencia <- sort(unique(municipios_disp_demencia$Municipio))
 
-    defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+    defaults <- MUNICIPIOS_DEFAULT
       selected_defaults <- intersect(defaults, municipios_disp_demencia)
       
       if (length(selected_defaults) == 0) {
@@ -1085,7 +1155,7 @@ output$barPlotSexo <- renderPlotly({
     municipios_disp_suicidio <- datos_suicidio[Indicador11 == input$indicador_suicidio]
     municipios_disp_suicidio <- sort(unique(municipios_disp_suicidio$Municipio))
 
-    defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+    defaults <- MUNICIPIOS_DEFAULT
     selected_defaults <- intersect(defaults, municipios_disp_suicidio)
 
     if (length(selected_defaults) == 0) {
@@ -1204,8 +1274,7 @@ output$barPlotSexo <- renderPlotly({
     df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor, na.rm = TRUE)), 
                             by = .(Año, Municipio)]
     
-    df_agg <- df_agg %>%
-        mutate(Año = factor(Año))
+    df_agg[, Año := factor(Año)]
     #  Plot
     plot_ly(df_agg, 
             x = ~Año,     
@@ -1214,12 +1283,8 @@ output$barPlotSexo <- renderPlotly({
             type = "scatter", 
             mode = "lines+markers",
             hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
-            #hoverinfo = "text",
-            #text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
-            #opacity = 1)
      ) %>%
       layout(
-        #title = input$indicador_suicidio, 
         xaxis = list(title = "Año"),
         yaxis = list(title = "Tasa por 100.000 personas"),
         hovermode = "x unified",
@@ -1231,7 +1296,13 @@ output$barPlotSexo <- renderPlotly({
         plot_bgcolor = "white", 
         paper_bgcolor = "white" 
       )
-  })
+  }) |> bindCache(
+    input$indicador_suicidio,
+    input$municipio_suicidio,
+    input$year_min_suicidio,  input$year_max_suicidio,
+    input$tipo_suicidio,      input$categoria_suicidio,
+    cache = "app"
+  )
   # --- Botones: Actualizar y Limpiar ---
   observeEvent(input$reset_filters_suicidio, {
     req(input$indicador_suicidio)
@@ -1239,7 +1310,7 @@ output$barPlotSexo <- renderPlotly({
     municipios_disp_suicidio <- datos_suicidio[Indicador11 == input$indicador_suicidio]
     municipios_disp_suicidio <- sort(unique(municipios_disp_suicidio$Municipio))
 
-    defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+    defaults <- MUNICIPIOS_DEFAULT
       selected_defaults <- intersect(defaults, municipios_disp_suicidio)
       
       if (length(selected_defaults) == 0) {
@@ -1258,15 +1329,6 @@ output$barPlotSexo <- renderPlotly({
 #  GRÁFICO DE USO DE SERVICIOS 
 # -------------------------------------------------------------------
 
-# Detectar columna de valor válida en datos_servicios (Valor1 o Valor)
-valor_col_servicios <- if ("Valor1" %in% names(datos_servicios)) {
-  "Valor1"
-} else if ("Valor" %in% names(datos_servicios)) {
-  "Valor"
-} else {
-  stop("No se encontró columna de valor en 'datos_servicios'. Debe existir 'Valor1' o 'Valor'.")
-}
-
 # --- Filtros dinámicos ---
 output$indicador_servicios_ui <- renderUI({
   selectInput(
@@ -1281,7 +1343,7 @@ output$muni_servicios_ui <- renderUI({
   req(input$indicador_servicios)
   municipios_disp_servicios <- datos_servicios[Indicador11 == input$indicador_servicios]
   municipios_disp_servicios <- sort(unique(municipios_disp_servicios$Municipio))
-  defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+  defaults <- MUNICIPIOS_DEFAULT
   selected_defaults <- intersect(defaults, municipios_disp_servicios)
   if (length(selected_defaults) == 0) selected_defaults <- head(municipios_disp_servicios, 5)
   pickerInput(
@@ -1380,9 +1442,7 @@ output$grafico_servicios <- renderPlotly({
   # Asegurarse de que la columna de valor esté numérica
   # (get(valor_col_servicios) ya la devuelve; compute mean)
   df_agg <- df_filtrado[, .(Valor_Plot = mean(get(valor_col_servicios), na.rm = TRUE)), by = .(Año, Municipio)]
-  
-  df_agg <- df_agg %>%
-        mutate(Año = factor(Año))
+  df_agg[, Año := factor(Año)]
 
   plot_ly(
     df_agg,
@@ -1392,9 +1452,6 @@ output$grafico_servicios <- renderPlotly({
     type = "scatter",
     mode = "lines+markers",
     hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
-    #hoverinfo = "text",
-    #text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
-    #opacity = 1
   ) %>%
     layout(
       xaxis = list(title = "Año"),
@@ -1408,7 +1465,13 @@ output$grafico_servicios <- renderPlotly({
       plot_bgcolor = "white",
       paper_bgcolor = "white"
     )
-})
+}) |> bindCache(
+    input$indicador_servicios,
+    input$municipio_servicios,
+    input$year_min_servicios,  input$year_max_servicios,
+    input$tipo_servicios,      input$categoria_servicios,
+    cache = "app"
+  )
 
 # -------------------------------------------------------------------
 #  BOTÓN RESET filtros servicios
@@ -1418,7 +1481,7 @@ observeEvent(input$reset_filters_servicios, {
   
   municipios_disp_servicios <- datos_servicios[Indicador11 == input$indicador_servicios]
   municipios_disp_servicios <- sort(unique(municipios_disp_servicios$Municipio))
-  defaults <- c("La Union", "El Carmen", "Rionegro", "La Ceja", "El Retiro")
+  defaults <- MUNICIPIOS_DEFAULT
   selected_defaults <- intersect(defaults, municipios_disp_servicios)
   if (length(selected_defaults) == 0) selected_defaults <- head(municipios_disp_servicios, 5)
   
