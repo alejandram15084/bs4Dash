@@ -10,7 +10,7 @@ server <- function(input, output, session) {
       "Infraestructura" = "Disponibilidad de servicios y recursos físicos para la atención en salud mental, representada por el número de IPS habilitadas y las camas destinadas a estos servicios.",
       "Años Perdidos"    = "Número de años que dejan de vivir las personas al momento de morir, expresados por cada 100.000 habitantes.",
       "Atención"         = "Porcentaje de personas atendidas en los servicios de salud por una causa específica frente al total de atenciones registradas.",
-      "Hospitalización"  = "Proporción de personas que hospitalizadas en los servicios de salud por una causa específica frente al total de hospitalizaciones.",
+      "Hospitalización"  = "Proporción de personas que están hospitalizadas en los servicios de salud por una causa específica frente al total de hospitalizaciones.",
       "Mortalidad"       = "Número de muertes por 100.000 personas que ocurrirían si la población tuviera la misma estructura de edad que la población estándar.",
       "Letalidad"        = "Porcentaje de personas que mueren por lesiones autoinflingidas intencionalmente entre las personas con diagnóstico de lesiones autoinflingidas intencionalmente."
     )
@@ -36,6 +36,8 @@ server <- function(input, output, session) {
     if (nrow(df) == 0) return(NA)
     # Agrupar y sumar
     agg_df <- df[, .(valor = sum(Valor1, na.rm = TRUE)), by = c(columna)]
+    #Si todos los valores son 0
+    if (all(agg_df$valor == 0)) return("Sin reporte")
     # Ordenar
     if (tipo == "max") {
       setorder(agg_df, -valor)
@@ -59,7 +61,8 @@ server <- function(input, output, session) {
       total = total,
       promedio = promedio,
       mayor_mpio = mayor_mpio,
-      menor_mpio = menor_mpio
+      menor_mpio = menor_mpio,
+      ultimo_anio = ultimo_anio
     )
 
   }
@@ -92,25 +95,58 @@ server <- function(input, output, session) {
                             "Municipio mayor letalidad",
                             "Municipio menor letalidad")
     )
+    repite_municipio <- is.na(kpis$mayor_mpio) || 
+                      is.na(kpis$menio_mpio) || 
+                      (kpis$total == 0) || 
+                      (kpis$mayor_mpio == kpis$menor_mpio)
+
+  valor_mayor <- if(repite_municipio && kpis$total == 0) "N/A" else kpis$mayor_mpio
+  valor_menor <- if(repite_municipio && kpis$total == 0) "N/A" else kpis$menor_mpio
+
+
     fluidRow(
+      #Caja 1 Total
       bs4InfoBox(title = titulos[[input$tab_activa]][1], 
                  value = format(kpis$total, big.mark = ".",
                                 decimal.mark = ","),
                  icon = icon("chart-line"), color = "secondary",
                  gradient = TRUE, fill = TRUE, width = 3),
+      #Caja 2 Promedio
       bs4InfoBox(title = titulos[[input$tab_activa]][2],
                  value = format(kpis$promedio, big.mark = ".",
                                 decimal.mark = ","),
                  icon = icon("calculator"),
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3),
+      #Caja 3 Mayor
       bs4InfoBox(title = titulos[[input$tab_activa]][3],
                  value = kpis$mayor_mpio, icon = icon("map-marker-alt"),
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3),
+      #Caja 4 Menor
       bs4InfoBox(title = titulos[[input$tab_activa]][4],
                  value = kpis$menor_mpio, icon = icon("map-marker"),
                  color = "secondary", gradient = TRUE, fill = TRUE, width = 3)
     )
   })
+
+  output$kpi_descripcion <- renderUI({
+    # Validar que existan los datos calculados
+    req(kpi_cache())
+    kpis <- kpi_cache()
+    
+    # Crear el contenedor del título
+    div(
+      style = "margin-left: 15px; margin-bottom: 15px;",
+      h4(
+        style = "font-weight: bold; color: #333;",
+        paste0(
+          "Indicadores calculados para el año ", 
+          kpis$ultimo_anio, 
+          ", considerando todos los municipios seleccionados."
+        )
+      )
+    )
+  })
+
   # -------------------------------------------------------------------
   # FILTROS DE AÑOS (UI dinámico)
   # -------------------------------------------------------------------
@@ -265,12 +301,34 @@ server <- function(input, output, session) {
   #  GRÁFICO DE LÍNEAS 
   # -------------------------------------------------------------------
   output$linePlot <- renderPlotly({
+    # 1. Validar que existan datos filtrados
     df_filtrado <- data_filtrada()
     validate(need(nrow(df_filtrado) > 0, 
-    "No hay datos disponibles para los filtros seleccionados"))
+            "No hay datos disponibles para los filtros seleccionados"))
+    
+    # 2. Validar que la pestaña activa esté disponible para el switch
+    req(input$tab_activa)
+    
+    # 3. Definir el título del eje Y dinámicamente según la ficha técnica
+    # Se usa el nombre exacto de tus pestañas en server_3.R
+    titulo_eje_y <- switch(input$tab_activa,
+      "Infraestructura" = "Número",
+      "Años Perdidos"   = "Tasa por 100.000 personas",
+      "Atención"        = "Porcentaje (%)",
+      "Hospitalización" = "Porcentaje (%)",
+      "Mortalidad"      = "Tasa por 100.000 personas",
+      "Letalidad"       = "Porcentaje (%)",
+      "Valor" # Nombre por defecto
+    )
+    
+    # 4. Agrupar los datos por Año y Municipio
     df_agg <- df_filtrado[, .(Valor_Plot = mean(Valor1, na.rm = TRUE)), 
                           by = .(Ano, Municipio)]
-    indicador_actual <- isolate(input$indicador)
+    
+    # 5. Ordenar internamente para asegurar la jerarquía en el hover
+    setorder(df_agg, Ano, -Valor_Plot)
+
+    # 6. Construcción del gráfico
     plot_ly(
       data = df_agg,
       x = ~Ano,
@@ -278,26 +336,36 @@ server <- function(input, output, session) {
       color = ~Municipio,
       type  = "scatter",
       mode  = "lines+markers",
-      hoverinfo = "text",
-      text = ~paste("Municipio:", 
-                    Municipio, "<br>Año:",
-                    Ano, "<br>Valor:",
-                    round(Valor_Plot, 2)),
-      opacity = 1
+      # Hovertemplate limpio para evitar saturación visual
+      hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
     ) %>%
       layout(
-        #title = paste(indicador_actual),
-        xaxis = list(title = "Año", dtick =1),
-        yaxis = list(title = "Valor"),
-        hovermode = "x unified",
+        xaxis = list(
+          title = "Año", 
+          dtick = 1
+        ),
+        yaxis = list(
+          title = titulo_eje_y, 
+          categoryorder = "total descending" # Ordena los municipios de mayor a menor
+        ),
+        # 'x unified' agrupa los municipios que coinciden en el mismo año/punto
+        hovermode = "x unified", 
+        hoverlabel = list(
+          namelength = -1, 
+          bgcolor = "rgba(255,255,255,0.8)",
+          font = list(size = 12)
+        ),
+        # Distancia para activar el hover
+        hoverdistance = 100,
         plot_bgcolor = "white",
-        paper_bgcolor = "white"
+        paper_bgcolor = "white",
+        # Mostrar la leyenda de forma normal
+        legend = list(traceorder = "normal")
       )
   })
 # -------------------------------------------------------------------
 #  GRÁFICO DE BARRAS POR SEXO 
 # -------------------------------------------------------------------
-
 # Indicador
 output$indicador_sexo_ui <- renderUI({
   req(input$tab_activa)
@@ -336,7 +404,6 @@ output$municipio_sexo_ui <- renderUI({
     sort(unique(Municipio))
   ]
   
-  
   pickerInput(
     inputId = "municipio_sexo",
     label = "Municipio",
@@ -354,10 +421,21 @@ output$municipio_sexo_ui <- renderUI({
   )
 })
 
-# Gráfica
+# Gráfica corregida con Eje Y dinámico
 output$barPlotSexo <- renderPlotly({
-  req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo)
+  req(input$indicador_sexo, input$anio_sexo, input$municipio_sexo, input$tab_activa)
   
+  # 1. Definir la unidad de medida según la categoría técnica del indicador
+  titulo_eje_y <- switch(input$tab_activa,
+    "Infraestructura" = "Número",
+    "Años Perdidos"   = "Tasa por 100.000 personas",
+    "Atención"        = "Porcentaje (%)",
+    "Hospitalización" = "Porcentaje (%)",
+    "Mortalidad"      = "Tasa por 100.000 personas",
+    "Letalidad"       = "Porcentaje (%)",
+    "Valor" # Etiqueta genérica si no hay coincidencia
+  )
+
   df <- datos_total[
     Indicador1 == input$indicador_sexo &
     Ano == input$anio_sexo &
@@ -368,10 +446,10 @@ output$barPlotSexo <- renderPlotly({
   
   validate(
     need(nrow(df) > 0,
-         "No hay datos disponibles para la selección realizada")
+          "No hay datos disponibles para la selección realizada")
   )
   
-  # agregación
+  # Agregación
   df_agg <- df[
     !is.na(Valor1) & Valor1 > 0,
     .(Valor = mean(as.numeric(Valor1), na.rm = TRUE)),
@@ -396,7 +474,7 @@ output$barPlotSexo <- renderPlotly({
   df_agg[is.na(Valor), Valor := 0]
   
   df_agg[, Categoria := factor(Categoria, 
-                               levels = c("Masculino", "Femenino"))]
+                                levels = c("Masculino", "Femenino"))]
   
   colores_sexo <- c(
     "Masculino" = "#344e41", 
@@ -410,12 +488,15 @@ output$barPlotSexo <- renderPlotly({
     color = ~Categoria,
     colors = colores_sexo,
     type = "bar",
-    hovertemplate = "Municipio: %{x}<br>Valor: %{y}<extra></extra>"
+    # Hovertemplate actualizado con la unidad dinámica para mayor usabilidad
+    hovertemplate = paste0("<b>%{x}</b><br>",
+                           "Sexo: %{fullData.name}<br>",
+                           titulo_eje_y, ": %{y:.2f}<extra></extra>")
   ) %>%
     layout(
       barmode = "group",
       xaxis = list(title = "Municipio", tickangle = -45),
-      yaxis = list(title = "Valor"),
+      yaxis = list(title = titulo_eje_y), # Aplicación del cambio solicitado
       legend = list(title = list(text = "<b>Sexo</b>")),
       plot_bgcolor = "white",
       paper_bgcolor = "white"
@@ -445,6 +526,7 @@ output$barPlotSexo <- renderPlotly({
       selected = indicadores_validos_edad
     )
   })
+  
   output$anio_edad_ui <- renderUI({
     req(input$indicador_edad)
     anios_validos <- datos_total[
@@ -484,8 +566,6 @@ output$barPlotSexo <- renderPlotly({
     }
 
 
-
-
     selectInput(
       inputId = "municipio_edad",
       label = "Municipio",
@@ -494,7 +574,22 @@ output$barPlotSexo <- renderPlotly({
     )
   })
   output$barPlotEdad <- renderPlotly({
-    req(input$indicador_edad, input$anio_edad, input$municipio_edad)
+    # 1. Validaciones iniciales
+    req(input$indicador_edad, input$anio_edad, input$municipio_edad, input$tab_activa)
+    
+    # 2. Lógica para el Título del Eje Y dinámico
+    # Esto asegura que la unidad de medida sea técnicamente correcta
+    titulo_eje_y <- switch(input$tab_activa,
+      "Infraestructura" = "Número",
+      "Años Perdidos"   = "Tasa por 100.000 personas",
+      "Atención"        = "Porcentaje (%)",
+      "Hospitalización" = "Porcentaje (%)",
+      "Mortalidad"      = "Tasa por 100.000 personas",
+      "Letalidad"       = "Porcentaje (%)",
+      "Valor" # Nombre por defecto si no coincide ninguno
+    )
+
+    # 3. Filtrado y preparación de datos
     df <- datos_total[
       Indicador1 == input$indicador_edad &
       Ano == input$anio_edad &
@@ -505,8 +600,12 @@ output$barPlotSexo <- renderPlotly({
       .(Valor = mean(as.numeric(Valor1), na.rm = TRUE)),
       by = Categoria
     ]
+    
+    # 4. Validación de existencia de datos
     validate(need(nrow(df) > 0,
-    "No hay datos disponibles para el municipio y año seleccionados"))
+             "No hay datos disponibles para el municipio y año seleccionados"))
+    
+    # 5. Renderizado del Gráfico
     plot_ly(
       data = df,
       x = ~Categoria,
@@ -514,25 +613,33 @@ output$barPlotSexo <- renderPlotly({
       type = "bar",
       color = ~Categoria,
       colors = "Greens",
-      hovertemplate = "Edad: %{x}<br>Valor: %{y}<extra></extra>"
+      # Se actualiza el hovertemplate para usar la unidad dinámica
+      hovertemplate = paste0("<b>Edad:</b> %{x}<br><b>", 
+                             titulo_eje_y, ":</b> %{y:.2f}<extra></extra>")
     ) %>%
       layout(
-        #title = paste(input$indicador_edad, "por grupo de edad"),
-        xaxis = list(title = "Grupo de edad", tickangle = -45),
-        yaxis = list(title = "Valor"),
+        xaxis = list(
+          title = "Grupo de edad", 
+          tickangle = -45
+        ),
+        yaxis = list(
+          title = titulo_eje_y # Aplicación del eje Y dinámico
+        ),
         plot_bgcolor = "white",
-        paper_bgcolor = "white"
+        paper_bgcolor = "white",
+        showlegend = FALSE # Opcional: oculta la leyenda si los colores son por categoría
       )
   })
   # ------------------------------------------------------------------- 
   # GRÁFICO DE BARRAS: PRINCIPALES CAUSAS AÑOS PERDIDOS 
   # ------------------------------------------------------------------- 
+  
   # --- FUNCIÓN DE AYUDA PARA SALTO DE LÍNEA ---
-  # Usa str_wrap para cortar texto y reemplaza el \n (R) por <br> (HTML)
   wrap_text <- function(text, width = 80) {
     wrapped <- stringr::str_wrap(text, width = width)
     return(gsub("\\n", "<br>", wrapped))
   }
+
   # --- Selector dinámico de año ---
   output$anio_seleccionado_ui <- renderUI({ 
     df <- datos_total [
@@ -551,19 +658,21 @@ output$barPlotSexo <- renderPlotly({
       width = "160px"
     )
   })
+
   # --- Gráfico de barras horizontal ---
   output$grafico_top_causas <- renderPlotly({ 
     req(input$tab_activa == "Años Perdidos") 
+    
     df <- datos_total %>% 
       filter(str_detect(Indicador1, regex("año|vida|perd", ignore_case = TRUE))) 
-    # Año seleccionado; si no existe, usar el último disponible
+    
     selected_year <- input$anio_seleccionado %||% max(df$Ano, na.rm = TRUE)
-    df_year <- df %>% 
-      filter(Ano == selected_year)
-    # Validación de datos disponibles
+    df_year <- df %>% filter(Ano == selected_year)
+    
     validate( 
       need(nrow(df_year) > 0, paste("No hay datos para el año", selected_year))
     ) 
+
     # --- Agrupar y calcular el top 10 de causas ---
     top10_causas <- df_year %>% 
       filter(Tipo == "Geografia", Categoria == "Geografia") %>% 
@@ -573,7 +682,9 @@ output$barPlotSexo <- renderPlotly({
       arrange(desc(valor_total)) %>% 
       slice_head(n = 10) %>%
       mutate(Indicador_wrap = wrap_text(Indicador1, width = 80))
-      validate(need(nrow(top10_causas) > 0, "No hay causas con valores disponibles")) 
+    
+    validate(need(nrow(top10_causas) > 0, "No hay causas con valores disponibles")) 
+
     # --- Crear gráfico ---
     plot_ly( 
       data = top10_causas,
@@ -582,15 +693,29 @@ output$barPlotSexo <- renderPlotly({
       type = "bar",
       orientation = "h",
       text = ~paste(round(valor_total, 2)),
+      textposition = 'outside', 
       hoverinfo = "text",
       marker = list(color = "#588157")
     ) %>% 
       layout( 
-        #title = paste("Principales causas de años perdidos en", selected_year), 
-        xaxis = list(title = "Años perdidos"),
-        yaxis = list(title = ""),
+        xaxis = list(
+          title = "Años perdidos",
+          zeroline = FALSE
+        ),
+        yaxis = list(
+          title = "",
+          automargin = TRUE,
+          # Forzamos la alineación a la izquierda absoluta
+          tickfont = list(size = 11),
+          tickangle = 0,
+          # La clave: x = 0 coloca el texto al inicio del margen
+          x = 0 
+        ),
+        # Mantenemos tus proporciones de margen
+        margin = list(l = 350, r = 50, b = 60, t = 20, pad = 10),
         plot_bgcolor = "white",
-        paper_bgcolor = "white"
+        paper_bgcolor = "white",
+        showlegend = FALSE
       )
   })
   # -------------------------------------------------------------------
@@ -902,14 +1027,21 @@ output$barPlotSexo <- renderPlotly({
             color = ~Municipio,
             type = 'scatter', 
             mode = 'lines+markers',
-            hoverinfo = "text",
-            text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
-            opacity = 1) %>%
+            hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
+            #hoverinfo = "text",
+            #text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
+            #opacity = 1
+            ) %>%
       layout(
         #title = input$indicador_demencia, 
         xaxis = list(title = "Año"),
-        yaxis = list(title = "Valor"),
+        yaxis = list(title = "Porcentaje (%)"),
         hovermode = "x unified",
+        hoverlabel = list(
+          namelength = -1, 
+          bgcolor = "rgba(255,255,255,0.8)",
+          font = list(size = 12)
+        ),
         plot_bgcolor = "white", 
         paper_bgcolor = "white" 
       )
@@ -1081,14 +1213,21 @@ output$barPlotSexo <- renderPlotly({
             color = ~Municipio,
             type = "scatter", 
             mode = "lines+markers",
-            hoverinfo = "text",
-            text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
-            opacity = 1) %>%
+            hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
+            #hoverinfo = "text",
+            #text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
+            #opacity = 1)
+     ) %>%
       layout(
         #title = input$indicador_suicidio, 
         xaxis = list(title = "Año"),
-        yaxis = list(title = "Valor"),
+        yaxis = list(title = "Tasa por 100.000 personas"),
         hovermode = "x unified",
+        hoverlabel = list(
+          namelength = -1, 
+          bgcolor = "rgba(255,255,255,0.8)",
+          font = list(size = 12)
+        ),
         plot_bgcolor = "white", 
         paper_bgcolor = "white" 
       )
@@ -1252,14 +1391,20 @@ output$grafico_servicios <- renderPlotly({
     color = ~Municipio,
     type = "scatter",
     mode = "lines+markers",
-    hoverinfo = "text",
-    text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
-    opacity = 1
+    hovertemplate = "<b>%{fullData.name}</b>: %{y:.2f}<extra></extra>"
+    #hoverinfo = "text",
+    #text = ~paste("Municipio:", Municipio, "<br>Año:", Año, "<br>Valor:", round(Valor_Plot, 2)),
+    #opacity = 1
   ) %>%
     layout(
       xaxis = list(title = "Año"),
-      yaxis = list(title = "Valor promedio"),
+      yaxis = list(title = "Porcentaje (%)"),
       hovermode = "x unified",
+      hoverlabel = list(
+          namelength = -1, 
+          bgcolor = "rgba(255,255,255,0.8)",
+          font = list(size = 12)
+        ),
       plot_bgcolor = "white",
       paper_bgcolor = "white"
     )

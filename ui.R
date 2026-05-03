@@ -6,11 +6,24 @@ ui <- bs4DashPage(
   # --- HEADER ---
   header = dashboardHeader(
     title = dashboardBrand(
-      title = "Dashboard",
+      #title = "Dashboard",
+      title = tags$span("Dashboard", style = "color: #343A40 !important; font-weight: bold;"),
       color = "gray-dark",
       href = "#",
-      image = "log.png"
+      #image = "log.png"
     ),
+tags$li(
+      class = "nav-item d-none d-sm-inline-block",
+      style = "line-height: 1.2; margin-left: 20px; margin-top: 5px;",
+      tags$div(
+        tags$strong("Visualización de Indicadores de Salud Mental", 
+                    style = "font-size: 1.3rem; color: #1f2d3d; display: block;"),
+        tags$span("Oriente Antioqueño", 
+                   style = "font-size: 0.9rem; color: #6c757d; display: block;")
+      )
+    ),
+
+
     skin = "light",
     border = TRUE,
     controlbarIcon = NULL,
@@ -162,6 +175,7 @@ ui <- bs4DashPage(
         ),
         br(),
         # ================== CAJA DE KPIS ===========================
+        uiOutput("kpi_descripcion"),
         uiOutput("kpi_boxes"),
         br(),
         # ================== GRÁFICO DE BARRAS SEXO ===================
@@ -230,7 +244,7 @@ ui <- bs4DashPage(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
-              title = "Principales causas de años de vida potencialmente perdidos",
+              title = "Promedio regional de años de vida potencialmente perdidos",
               uiOutput("anio_seleccionado_ui"),
               plotlyOutput("grafico_top_causas", height = "400px")  
               %>% withSpinner(color = "black")
@@ -246,7 +260,7 @@ ui <- bs4DashPage(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
-              title = "Principales causas de atención",
+              title = "Promedio regional de atenciones",
               uiOutput("anio_atencion_ui"),
               plotlyOutput("grafico_top_atencion", height = "400px")
               %>% withSpinner(color = "black")
@@ -262,6 +276,7 @@ ui <- bs4DashPage(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
+              title = "Promedio regional de hospitalizaciones",
               uiOutput("anio_hospitalizacion_ui"),
               plotlyOutput("grafico_top_hospitalizacion", height = "400px")
               %>% withSpinner(color = "black")
@@ -277,6 +292,7 @@ ui <- bs4DashPage(
               status = "primary",
               solidHeader = TRUE,
               collapsible = FALSE,
+              title = "Principales causas de letalidad",
               uiOutput("anio_letalidad_ui"),
               plotlyOutput("grafico_lesiones_autoinfligidas", height = "400px")
               %>% withSpinner(color = "black")
@@ -489,8 +505,15 @@ ui <- bs4DashPage(
               collapsible = FALSE,
               solidHeader = TRUE,
               style = "height: 100px;",
-              "Sistema Integrado de Información de la Protección Social SISPRO. 
-              Datos agregados desde 2005 hasta 2024."
+              "Sistema Integrado de Información de la Protección Social",
+              # Enlace dinámico
+              a(
+                href = "https://www.sispro.gov.co/observatorios/onsaludmental/indicadores/Paginas/Indicadores.aspx", 
+                target = "_blank", # Abre en una pestaña nueva
+                style = "color: #588157; font-weight: bold; text-decoration: underline;",
+                "SISPRO"
+              ),
+              ". Datos agregados desde 2005 hasta 2024."
             )
           ),
           column(

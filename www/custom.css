@@ -1,6 +1,10 @@
 /*BODY*/
 
 
+/*Cambio color titulo */ 
+.bg-gray-dark, .bg-gray-dark>a {
+    color: #343a40 !important;
+}
 
 
 /*Opciones navbar */ 
@@ -39,9 +43,8 @@
 
 .nav-pills .nav-link:hover {
     background-color: #333333 !important; 
+    color: white !important;              
     font-weight: bold;
-    color:white !important;
-   
 }
 
 
@@ -80,12 +83,16 @@
 }
 
 
-.sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active :hover {
-    background-color: #333333;
+.sidebar-light-primary .nav-sidebar > .nav-item > .nav-link:hover {
+    background-color: #333333 !important;
+    color: #fff !important;
 }
 
 
-
+/*Hover de grafico de lineas */
+.hoverlayer .hovertext text {
+    font-size: 11px !important;  
+}
 
 /* Alinear títulos de todas las gráficas a la izquierda */
 
@@ -295,16 +302,15 @@
 
 }
 
-/* Oculta el icono original */
-.main-header [data-widget="pushmenu"] i {
+/* Oculta el icono hamburguesa */
+.main-header .navbar-nav .nav-link i.fa-bars {
   display: none;
 }
 
-/* Inserta nuevo icono */
-.main-header [data-widget="pushmenu"]::before {
-  content: "\f0ca"; 
+/* Agrega nuevo icono */
+.main-header .navbar-nav .nav-link::before {
+  content: "\f0c9"; /* icono Font Awesome */
   font-family: "Font Awesome 5 Free";
   font-weight: 900;
   font-size: 18px;
-  color: inherit;
 }
